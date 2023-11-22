@@ -258,7 +258,7 @@ lthnvpnd|run)
         sleep 5
     done
     echo "Starting dispatcher" >&2
-    exec lthnvpnd --wallet-rpc-uri "$WALLET_RPC_URI" --syslog "$@"
+    exec lthnvpnd -l DEBUG --wallet-rpc-uri "$WALLET_RPC_URI" --syslog "$@"
     ;;
 
 wallet-rpc)

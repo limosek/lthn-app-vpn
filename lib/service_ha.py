@@ -60,7 +60,7 @@ class ServiceHa(Service):
             log.L.error("Error runing service %s: %s" % (self.id, " ".join(cmd)))
             sys.exit(1)
         time.sleep(0.3)
-        pid=open(self.pidfile).read()
+        pid=open(self.pidfile).read().strip()
         if (pid.isdigit()):
             self.pid = int(pid)
         else:
@@ -82,6 +82,8 @@ class ServiceHa(Service):
         try:
             os.kill(self.pid, 0)
         except OSError:
+            return False
+        except TypeError:
             return False
         else:
             return True
@@ -108,7 +110,7 @@ class ServiceHa(Service):
     def orchestrate(self):
         self.mgmtConnect()
         l = self.getLine()
-        while (l is not None):
+        while (l):
             log.L.debug("%s[%s]-stderr: %s" % (self.type, self.id, l))
             l = self.getLine()
         l = self.mgmtRead()
