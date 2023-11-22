@@ -85,7 +85,7 @@ runWalletCli(){
     fi
     if [ -z "$WALLET_RPC_URI" ]; then
       echo "Starting Wallet cli with $CONF/$WALLET_FILE." >&2
-      lethean-wallet-cli --wallet-file "$CONF/$WALLET_FILE" --daemon-host "$DAEMON_HOST" --password "$WALLET_PASSWORD"
+      lethean-wallet-cli --wallet-file "$CONF/$WALLET_FILE" --restore-height "$WALLET_RESTORE_HEIGHT" --daemon-host "$DAEMON_HOST" --password "$WALLET_PASSWORD"
       sleep 4
     else
       echo "Wallet is outside of container ($WALLET_RPC_URI)." >&2
@@ -157,6 +157,8 @@ generateEnv(){
     echo "WALLET_FILE='$WALLET_FILE'"
     echo "WALLET_RPC_URI='$WALLET_RPC_URI'"
 }
+
+. /opt/lthn/venv/bin/activate
 
 case $1 in
 easy-deploy)
@@ -241,7 +243,12 @@ lthnvpnd|run)
     squid -f $CONF/squid.conf
     if [ -z "$DAEMON_HOST" ]; then
         runDaemon
+        DAEMON_HOST=localhost
     fi
+    while ! curl "http://$DAEMON_HOST:48782" >/dev/null 2>/dev/null; do
+        echo "Waiting for daemon"
+        sleep 5
+    done
     runWalletRpc
     unset HTTP_PROXY
     unset http_proxy
@@ -311,7 +318,7 @@ root)
     ;;
 
 sh|bash)
-    /bin/bash
+    /bin/bash --rcfile /opt/lthn/venv/bin/activate
     ;;
 
 *)

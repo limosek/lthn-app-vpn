@@ -1,4 +1,4 @@
-FROM python:3-buster
+FROM python:3.11-bookworm
 MAINTAINER Snider <snider@lt.hn>
 
 LABEL version="1.0"
@@ -6,9 +6,9 @@ LABEL description="Lethean VPN Exit Node"
 
 RUN apt-get update; \
     apt-get upgrade -y; \
-    apt-get install -y sudo joe less haproxy openvpn squid net-tools wget stunnel zsync pwgen unzip;
+    apt-get install -y sudo joe less haproxy openvpn squid net-tools wget stunnel zsync pwgen unzip python3-venv;
 
-ARG DAEMON_BIN_URL="https://github.com/letheanVPN/blockchain-iz/releases/latest/download/linux.tar"
+ARG DAEMON_BIN_URL="https://github.com/letheanVPN/blockchain-iz/releases/latest/download/lethean-cli-linux.tar"
 ARG DAEMON_HOST="seed.lethean.io"
 ARG PORT="8080"
 
@@ -62,7 +62,7 @@ CMD ["run"]
 RUN useradd -ms /bin/bash lthn; \
   echo "lthn ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers; \
   mkdir /usr/src/lethean-vpn; \
-  chown -R lthn /usr/src/lethean-vpn
+  chown -R lthn /usr/src/lethean-vpn /var/log
 
 WORKDIR /usr/src/lethean-vpn/build
 RUN wget -nc -c $DAEMON_BIN_URL && mkdir -p /usr/bin/lethean-latest-linux && tar -xf $(basename $DAEMON_BIN_URL) -C /usr/bin/lethean-latest-linux && mv /usr/bin/lethean-latest-linux/lethean* /usr/bin && chmod +x /usr/bin/lethean*
@@ -70,12 +70,13 @@ RUN wget -nc -c $DAEMON_BIN_URL && mkdir -p /usr/bin/lethean-latest-linux && tar
 USER root
 
 COPY ./ /usr/src/lethean-vpn/
+WORKDIR /usr/src/lethean-vpn/
 
-RUN rm -rf /usr/src/lethean-vpn/build/
-
-RUN /usr/local/bin/python -m pip install --upgrade pip
-
-RUN pip3 install -r /usr/src/lethean-vpn/requirements.txt
+RUN mkdir /opt/lthn && \
+   rm -rf /usr/src/lethean-vpn/build/ && \
+   python3 -m venv /opt/lthn/venv && \
+   . /opt/lthn/venv/bin/activate && \
+   pip3 install -r /usr/src/lethean-vpn/requirements.txt
 
 COPY ./server/docker-run.sh /entrypoint-lethean-vpn.sh
 
@@ -86,10 +87,9 @@ RUN chown -R lthn /usr/src/; \
 RUN echo -e "domain lthn.local\nsearch lthn.local\nnameserver 127.0.0.1\n >/etc/resolv.conf"
 
 USER lthn
-WORKDIR /usr/src/lethean-vpn/
-RUN chmod +x configure.sh; ./configure.sh --runas-user lthn --runas-group lthn --client;
-
-RUN make install SERVER=1 CLIENT=1;
+RUN chmod +x configure.sh; \
+    ./configure.sh --runas-user lthn --runas-group lthn --client; \
+    make install SERVER=1 CLIENT=1;
 
 RUN rm -rf /opt/lthn/etc/ca /opt/lthn/etc/*.ini /opt/lthn/etc/*.json /opt/lthn/etc/*.pem /opt/lthn/etc/*.tlsauth /opt/lthn/etc/*.keys /opt/lthn/etc/provider* \
         /opt/lthn/var/* \
